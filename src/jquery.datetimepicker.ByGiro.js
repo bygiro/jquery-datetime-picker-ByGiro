@@ -5,6 +5,16 @@
  *  License:	MIT
  */
 
+// compatibility for jQuery / jqLite
+var bg = bg || false;
+if(!bg && typeof jQuery == 'undefined'){
+	bg = angular.element;
+	bg.extend = angular.extend;
+	bg.isFunction = angular.isFunction;
+} else {
+	bg = jQuery;
+}
+
 // extends the Date prototype
 ;(function (d) {
 	d.getMaxDays = function(){
@@ -68,14 +78,14 @@
 		startView		: 'days', // times / days / months / years
 		min				: null, // starting date to allow selection
 		max				: null, // ending date to allow selection
-		today				: 'now', // if string is provided it will follow the option "format" provided (except for the string "now") / new Date() object
+		today			: 'now', // if string is provided it will follow the option "format" provided (except for the string "now") / new Date() object
 		showDaysNotInMonth : false,
 		showDisabledTimes : false,
 		calendars		: 1,
 		format			: 'Y-m-d', // PHP standard format
-		uiFormat			: 'Y-m-d', // PHP standard format. if provided different from the option "format", the original input will be hidden, and the date selected will be shown in this format
+		uiFormat		: 'Y-m-d', // PHP standard format. if provided different from the option "format", the original input will be hidden, and the date selected will be shown in this format
 		separator		: ' | ', // this will be the separator for multiple dates or date range
-		mode				: 'single', // single / multiple / range
+		mode			: 'single', // single / multiple / range
 		timeFormat		: 24, // 12 / 24
 		minuteStep		: 5,
 	/*	specialDates	:[ // it could be a simple array of numbers/strings 0 - 6: sunday -> saturday OR a more complex array of objects with more parameters
@@ -122,15 +132,12 @@
 	};
 
 	var trigger = function(event, callback, data) {
-		
-		var evt = $.Event(event);
-
 		if(!(data instanceof Array)){
 			data = [data];
 		}
 		data.unshift(this);
-		$(document).triggerHandler(evt, data);
-		this.options.$element.triggerHandler(evt, data);
+		$(document).triggerHandler(event, data);
+		this.options.$element.triggerHandler(event, data);
 		
 		if ($.isFunction(callback)) {
 			callback.call(this, data);
@@ -198,8 +205,8 @@
 			
 			fakeDate[config.methods[type]](step);
 		}
-		
-		this.options.$parent.find('.dtp-calendars').html(html);
+		var target = this.options.$parent[0].querySelectorAll('.dtp-calendars');
+		$(target).html(html);
 	},
 	
 	getUiTarget = function(){
@@ -566,20 +573,34 @@
 			className.push('dtp-disabled');
 			it.disabled = true;
 		}
-
-		if (
-			!it.disabled &&
-			(
-				custom.selected ||
-				config.dateValue == val ||
-				$.inArray(val, config.dateValue) > -1 ||
-				(
-					config.mode == 'range' && val >= config.dateValue[0] && val <= config.dateValue[1]
-				)
-			)
-		) {
-			className.push('dtp-selected');
+		
+		if(!it.disabled && config.dateValue.length){			
+			if(custom.selected || (config.mode == 'range' && val >= config.dateValue[0] && val <= config.dateValue[1])){
+				className.push('dtp-selected');
+			} else {
+				var toCheck = config.dateValue;
+				
+				if(!(toCheck instanceof Array)){
+					toCheck = [toCheck];
+				}
+				
+				var matched = false;
+				for(var i=0;i<toCheck.length;i++){
+					
+					matched = toCheck[i] == val;
+					if(config.views.indexOf(config.minView) > 0 || type == 'days'){
+						// we don't need to compare TIME, day is enough					
+						matched = compareDates.call(this,toCheck[i],val,['y','m','d']) === true;
+					}
+					
+					if(matched){
+						className.push('dtp-selected');
+						break;
+					}
+				}				
+			}
 		}
+		
 		
 		if(custom.attributes){
 			if(custom.attributes['class']){
@@ -981,7 +1002,7 @@
 				if(config.dateValue.indexOf(current) >= 0){
 					config.dateValue.splice(config.dateValue.indexOf(current),1);
 				} else {
-					if(!$.isArray(config.dateValue)){
+					if(!(config.dateValue instanceof Array)){
 						if(config.dateValue != ''){
 							config.dateValue = [config.dateValue];
 						} else {
@@ -1063,7 +1084,7 @@
 				break;
 		}
 
-		config.$element.val(val).trigger('keyup');
+		config.$element.val(val).triggerHandler('keyup');
 		var uiTarget = getUiTarget.call(this);
 		if(uiTarget.length){
 			method = 'val';
@@ -1095,7 +1116,7 @@
 				
 				if(config.style == 'popup' && config.autoclose){
 					if(config.mode != 'range' || (config.mode == 'range' && config.dateValue.length == 2)){
-						config.$element.trigger('click');
+						config.$element.triggerHandler('click');
 					}
 				}
 				return;
@@ -1113,52 +1134,66 @@
 	
 	addEventsHandlers = function(){
 		var that = this,
-			config = this.options;
-	
-		config.$parent.find('.dtp-calendars').on('click','.dtp-item',function(event){
+			config = this.options,
+			target;
+			
+			
+		var calendarsContainer = $(this.options.$parent[0].querySelectorAll('.dtp-calendars'));
+		calendarsContainer.on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
+			var ele = $(event.target);
+			if(!ele.is('.dtp-item')) return;
 			
-			
-			var value = parseInt($(this).attr('data-value')),
-			type = $(this).closest('[data-view-type]').attr('data-view-type'),
-			message = $(this).attr('data-dtp-message');
+			var value = parseInt(ele.attr('data-value')),
+			type = ele.parent().parent().parent().attr('data-view-type'),
+			message = ele.attr('data-dtp-message');
 			
 			if(message){
 				alert(message);
 			}
 			
-			if(!$(this).hasClass('dtp-disabled')){
+			if(!ele.hasClass('dtp-disabled')){
 				clickItem.call(that,type,-1,value);
 			}
 		});
 		
-		config.$parent.parent().find('.dtp-values').on('click','.dtp-date-multiple',function(event){
+		target = this.options.$parent.parent()[0].querySelectorAll('.dtp-values');
+		$(target).on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
-			clickDate.call(that,parseInt($(this).attr('data-value')));
+			var ele = $(event.target);
+			if(!ele.is('.dtp-date-multiple')) return;
+			clickDate.call(that,parseInt(ele.attr('data-value')));
 		});
 		
-		config.$parent.parent().find('.dtp-toggler').on('click',function(event){
+		target = this.options.$parent.parent()[0].querySelectorAll('.dtp-toggler');
+		$(target).on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
-			config.$element.trigger('click');
+			config.$element.triggerHandler('click');
 		});
-				
-		config.$parent.find('.dtp-calendars').on('click','.dtp-btn-viewtype',function(event){
+		
+		calendarsContainer.on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
 			
-			var view,type = $(this).closest('[data-view-type]').attr('data-view-type');
+			var ele = $(event.target),
+			view,type = ele.parent().parent().attr('data-view-type');
+			if(!ele.is('.dtp-btn-viewtype')) return;
+			
 			clickItem.call(that,type);
 		});
 		
-		config.$parent.find('.dtp-calendars').on('click','.dtp-btn-next, .dtp-btn-prev',function(event){
+		calendarsContainer.on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
 			
-			var type = $(this).closest('[data-view-type]').attr('data-view-type'),qty = (type == 'years') ? 12 : 1;			
-			if($(event.currentTarget).hasClass('dtp-btn-prev')){
+			var ele = $(event.target);
+			if(!ele.is('.dtp-btn-next .dtp-icon-arrow-right, .dtp-btn-prev .dtp-icon-arrow-left')) return;
+			
+			var type = ele.parent().parent().parent().attr('data-view-type'),qty = (type == 'years') ? 12 : 1;
+			if(ele.hasClass('dtp-btn-prev') || ele.hasClass('dtp-icon-arrow-left')){
 				qty *= -1;
 			}
 
@@ -1167,19 +1202,18 @@
 		});
 
 		if(config.style == 'popup'){
-			var targEle = this.options.$element,
-				calContainer = that.options.$parent.find('.dtp-calendars');
-			calContainer.hide().removeClass('open');
+			var targEle = this.options.$element;
+			calendarsContainer.hide().removeClass('open');
 			
 			var uiTarget = getUiTarget.call(this);
 			if(uiTarget.length){
 				targEle.add(uiTarget);
 			}
 			targEle.on('click',function(){
-				if(calContainer.hasClass('open')){
-					calContainer.removeClass('open').slideUp();
+				if(calendarsContainer.hasClass('open')){
+					calendarsContainer.removeClass('open').slideUp();
 				} else {
-					calContainer.addClass('open').slideDown();
+					calendarsContainer.addClass('open').slideDown();
 				}
 			});
 		}
@@ -1226,10 +1260,6 @@
 			}
 		
 			$.extend( this.options, options, this.others_opts );
-
-			if(!this.options.$element.is('input[type=text]')){
-				return;
-			}
 			
 			ele = this.options.$element;
 			
@@ -1241,9 +1271,9 @@
 			inlineData = ele.data();
 
 			this.options = $.extend({}, this.options, options, inlineData, this.others_opts );
-						
+
 			config = this.options;
-			
+
 			config.text.days.unshift(config.text.days[6]);
 			config.text.daysShort.unshift(config.text.daysShort[6]);
 
@@ -1360,6 +1390,8 @@
 			addCalendars.call(this);
 			addEventsHandlers.call(this);
 			
+			ele.attr('readonly','readonly');
+			
 			// initialization completed
 			this.options.initialized = true;			
 			trigger.call(this,this.options.event_initialized, this.options.onInit,[]);
@@ -1383,7 +1415,7 @@
 		},
 		
 		addValue : function(value,format){
-			if(!$.isArray(value)){
+			if(!(value instanceof Array)){
 				value = [value];
 			}
 			
@@ -1404,6 +1436,32 @@
 			
 			this.options.dateValue = value;
 			
+			if(this.options.dateValue instanceof Array){
+				this.options.dateValue.sort();
+			}
+			updateUi.call(this);
+		},
+		
+		removeValue : function(value){
+			if(!(value instanceof Array)){
+				value = [value];
+			}
+			
+			for(var k=0;k<value.length;k++){
+				if(this.options.dateValue instanceof Array){
+					for(var d=0;d<this.options.dateValue.length;d++){
+						if(value[k] == this.options.dateValue[d]){
+							this.options.dateValue.splice(k, 1);
+						}
+					}
+				} else {
+					if(value[k] == this.options.dateValue){
+						this.options.dateValue = '';
+						break;
+					}
+				}
+			}
+						
 			if(this.options.dateValue instanceof Array){
 				this.options.dateValue.sort();
 			}
@@ -1434,7 +1492,7 @@
      * allowing any public function to be called via the jQuery plugin,
      * e.g. $(element).pluginName('functionName', arg1, arg2, ...)
      */
-    $.fn[ pluginName ] = function ( arg ) {
+    var main = function ( arg ) {
 
         var args, instance;
 
@@ -1479,4 +1537,29 @@
         }
     };
 
-}(jQuery, window, document));
+	// plugin integration
+	if($.fn){
+		$.fn[ pluginName ] = main;
+	} else {
+		$.prototype[ pluginName ] = main;
+
+		$.prototype.is = function(selector){
+			var el = this[0];			
+			return (el.matches || el.matchesSelector || el.msMatchesSelector || el.mozMatchesSelector || el.webkitMatchesSelector || el.oMatchesSelector).call(el, selector);
+		}
+		
+		$.prototype.slideUp = $.prototype.hide = function(){
+			for(var i=0;i<this.length;i++){
+				this[i].style.display = 'none';
+			}
+			return this;
+		}
+		
+		$.prototype.slideDown = $.prototype.show = function(){
+			for(var i=0;i<this.length;i++){
+				this[i].style.display = '';
+			}
+			return this;
+		}
+	}	
+}(bg, window, document));
