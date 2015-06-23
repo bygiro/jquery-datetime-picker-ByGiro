@@ -5,6 +5,8 @@
 
 .dtp-calendars {
 	position: absolute;
+	z-index: 100;
+	background: #fff;
 }
 
 .btn-close-calendar {
@@ -51,6 +53,7 @@
 	background-color: #DBEFFF;
 }
 
+.dtp-toggler,
 .dtp-btn-viewtype,
 .dtp-item:not(.dtp-disabled),
 .dtp-item.dtp-disabled[data-dtp-message],
@@ -184,3 +187,8 @@
 	content: "\ea38";
 }
 /* icomoon */
+
+/* fix bootstrap input-append */
+.dtp-container.input-append .dtp-calendars {
+	font-size: 14px;
+}

@@ -7,12 +7,14 @@
 
 // compatibility for jQuery / jqLite
 var bg = bg || false;
-if(!bg && typeof jQuery == 'undefined'){
-	bg = angular.element;
-	bg.extend = angular.extend;
-	bg.isFunction = angular.isFunction;
-} else {
-	bg = jQuery;
+if(!bg){
+	if(typeof jQuery != 'undefined'){
+		bg = jQuery;
+	} else if(typeof angular != 'undefined'){
+		bg = angular.element;
+		bg.extend = angular.extend;
+		bg.isFunction = angular.isFunction;
+	}
 }
 
 // extends the Date prototype
@@ -69,10 +71,10 @@ if(!bg && typeof jQuery == 'undefined'){
     // the name of using in .data()
 	dataPlugin = "plugin_" + pluginName,
 	defaults = {
-		style				: 'popup', // / inline / popup
-		autoclose		: false, // autoclose the popup on date / date range selected
-		uiTarget			: null, // the UI target to contain the datetime value
-		firstDay			: 1, // 0 - 6:  sunday -> saturday   // default 1 (Monday)
+		style			: 'popup', // / inline / popup
+		autoclose		: true, // autoclose the popup on date / date range selected
+		uiTarget		: null, // the UI target to contain the datetime value
+		firstDay		: 1, // 0 - 6:  sunday -> saturday   // default 1 (Monday)
 		minView			: 'times', // times / days / months / years
 		maxView			: 'years', // times / days / months / years
 		startView		: 'days', // times / days / months / years
@@ -136,7 +138,6 @@ if(!bg && typeof jQuery == 'undefined'){
 			data = [data];
 		}
 		data.unshift(this);
-		$(document).triggerHandler(event, data);
 		this.options.$element.triggerHandler(event, data);
 		
 		if ($.isFunction(callback)) {
@@ -153,7 +154,7 @@ if(!bg && typeof jQuery == 'undefined'){
 			tmpEle = config.$element.parent();
 		}
 				
-		this.options.$parent = tmpEle.wrap('<div class="dtp-container btn-group"></div>').parent();
+		this.options.$parent = tmpEle.wrap('<div class="dtp-container input-append"></div>').parent();
 		
 		if(config.format != config.uiFormat){
 		
@@ -163,7 +164,8 @@ if(!bg && typeof jQuery == 'undefined'){
 				var uiTarget = getUiTarget.call(this);
 				if(!uiTarget.length || uiTarget.is('input')){
 					this.options.$parent.append('<div class="dtp-values"></div>');
-					var mCont = this.options.$parent.find('.dtp-values');
+					var mCont = this.options.$parent.get(0).querySelectorAll('.dtp-values');
+					var mCont = $(mCont);
 					if(uiTarget instanceof jQuery){
 						this.options.uiTarget.add(mCont);
 					} else {
@@ -181,11 +183,11 @@ if(!bg && typeof jQuery == 'undefined'){
 		this.options.$parent.append(html);
 		
 		if(config.style == 'popup'){
-			this.options.$parent.find('.dtp-calendars').addClass('dtp-style-popup');
+			var mCont = $(this.options.$parent.get(0).querySelectorAll('.dtp-values')).addClass('dtp-style-popup');
 			
 			// add button to open/close calendars container
-			config.$element.after('<span class="btn btn-mini dtp-toggler">'+ config.text.calendarButton +'</span>');
-		}		
+			config.$element.after('<span class="add-on btn dtp-toggler">'+ config.text.calendarButton +'</span>');
+		}
 	},
 	
 	addCalendars = function(type,date){
@@ -212,7 +214,8 @@ if(!bg && typeof jQuery == 'undefined'){
 	getUiTarget = function(){
 		var uiTarget = false;
 		if(this.options.uiTarget){
-			uiTarget = this.options.$element.parent().parent().find(this.options.uiTarget);
+			uiTarget = this.options.$element.parent().parent().get(0).querySelectorAll(this.options.uiTarget);
+			uiTarget = $(uiTarget);
 		}
 		
 		return uiTarget;
@@ -228,10 +231,10 @@ if(!bg && typeof jQuery == 'undefined'){
 			+'<div class="dtp-btn-next">'+ config.text.next +'</div>'
 			+'</div>';	
 	},
-		
+
 	getViewType = function(type){
 		var config = this.options,
-			currentView = (config.$parent) ? config.$parent.find('[data-view-type]').attr('data-view-type') : '',
+			currentView = (config.$parent) ? $(config.$parent.get(0).querySelectorAll('[data-view-type]')).attr('data-view-type') : '',
 			type=/years|months|days|times/i.test(type) ? type : (currentView || config.startView);
 			
 		return type;
@@ -573,8 +576,8 @@ if(!bg && typeof jQuery == 'undefined'){
 			className.push('dtp-disabled');
 			it.disabled = true;
 		}
-		
-		if(!it.disabled && config.dateValue.length){			
+
+		if(!it.disabled && config.dateValue > 0){
 			if(custom.selected || (config.mode == 'range' && val >= config.dateValue[0] && val <= config.dateValue[1])){
 				className.push('dtp-selected');
 			} else {
@@ -583,7 +586,7 @@ if(!bg && typeof jQuery == 'undefined'){
 				if(!(toCheck instanceof Array)){
 					toCheck = [toCheck];
 				}
-				
+
 				var matched = false;
 				for(var i=0;i<toCheck.length;i++){
 					
@@ -1196,9 +1199,9 @@ if(!bg && typeof jQuery == 'undefined'){
 			if(ele.hasClass('dtp-btn-prev') || ele.hasClass('dtp-icon-arrow-left')){
 				qty *= -1;
 			}
-
+			
 			that.options.today[config.methods[type]](qty);
-			addCalendars.call(that);
+			addCalendars.call(that, type);
 		});
 
 		if(config.style == 'popup'){
@@ -1470,10 +1473,13 @@ if(!bg && typeof jQuery == 'undefined'){
 
         destroy: function () {
 		var that = this,
-			config = this.options;
+			config = this.options,ele;
 			
-			config.$parent.find('.dtp-values').remove();
-			config.$parent.find('.dtp-calendars').remove();
+			ele = config.$parent.get(0).querySelectorAll('.dtp-values');
+			ele.parentNode.removeChild(ele);
+			
+			ele = config.$parent.get(0).querySelectorAll('.dtp-calendars');
+			ele.parentNode.removeChild(ele);
 			
 			config.$element.show();
 			if(config.$element.parent().hasClass('input-append') || config.$element.parent().hasClass('input-prepend')){
@@ -1560,6 +1566,10 @@ if(!bg && typeof jQuery == 'undefined'){
 				this[i].style.display = '';
 			}
 			return this;
+		}
+		
+		$.prototype.get = function(index){
+			return this[index];
 		}
 	}	
 }(bg, window, document));
