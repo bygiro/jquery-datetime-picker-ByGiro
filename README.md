@@ -6,7 +6,7 @@ Fully Featured datetimepicker
 ### Install with Bower
 
 ```bash
-$ bower install jquery-datetime-picker-bygiro --save
+$ bower install jquery-datetimepicker --save
 ```
 
 check the demo

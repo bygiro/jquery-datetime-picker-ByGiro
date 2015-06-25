@@ -832,10 +832,14 @@ if(!bg){
 	},
 	
 	dateToStr = function(date, format){
+		if(!date || date == ''){
+			date = new Date();
+		}
+		date = (date instanceof Date) ? date : new Date(date);
+			
 		var that = this,
 			config = this.options,
 			format = (typeof format != 'undefined' && format != '') ? format : config.format,
-			date = (date instanceof Date) ? date : new Date(),
 			m = date.getMonth(),
 			d = date.getDate(),
 			y = date.getFullYear(),
