@@ -150,11 +150,11 @@ if(!bg){
 			config = this.options,
 			html = '',tmpEle = config.$element;
 
-		if(tmpEle.parent().hasClass('input-append') || tmpEle.parent().hasClass('input-prepend')){
+		if(tmpEle.parent().hasClass('input-group') || tmpEle.parent().hasClass('input-append') || tmpEle.parent().hasClass('input-prepend')){
 			tmpEle = config.$element.parent();
 		}
 				
-		this.options.$parent = tmpEle.wrap('<div class="dtp-container input-append"></div>').parent();
+		this.options.$parent = tmpEle.wrap('<div class="dtp-container input-append input-group"></div>').parent();
 		
 		if(config.format != config.uiFormat){
 		
@@ -186,7 +186,7 @@ if(!bg){
 			var mCont = $(this.options.$parent.get(0).querySelectorAll('.dtp-values')).addClass('dtp-style-popup');
 			
 			// add button to open/close calendars container
-			config.$element.after('<span class="add-on btn dtp-toggler">'+ config.text.calendarButton +'</span>');
+			config.$element.after('<span class="input-group-addon add-on btn dtp-toggler">'+ config.text.calendarButton +'</span>');
 		}
 	},
 	
@@ -1397,7 +1397,7 @@ if(!bg){
 			addCalendars.call(this);
 			addEventsHandlers.call(this);
 			
-			ele.attr('readonly','readonly');
+			ele.attr('readonly','readonly').addClass('form-control');
 			
 			// initialization completed
 			this.options.initialized = true;			
@@ -1486,7 +1486,7 @@ if(!bg){
 			ele.parentNode.removeChild(ele);
 			
 			config.$element.show();
-			if(config.$element.parent().hasClass('input-append') || config.$element.parent().hasClass('input-prepend')){
+			if(config.$element.parent().hasClass('input-group') || config.$element.parent().hasClass('input-append') || config.$element.parent().hasClass('input-prepend')){
 				config.$element.parent().show();
 			}
 			
