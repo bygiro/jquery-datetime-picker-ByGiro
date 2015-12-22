@@ -172,6 +172,13 @@ if(!bg){
 						this.options.uiTarget = mCont;
 					}
 				}
+			} else if(config.uiFormat && config.format != config.uiFormat){
+				var eleId = this.options.$element.attr('id'),
+				eleClass = this.options.$element.attr('class'),
+				htmlString = '<input readonly="true" type="text" id="'+ eleId +'-view-input" class="'+ eleClass +' view-input"/> ';
+				this.options.$element.after(htmlString);
+				this.options.viewInput = this.options.$element.next();
+				this.options.$element.hide();
 			}
 			
 			updateUi.call(this);
@@ -186,7 +193,8 @@ if(!bg){
 			var mCont = $(this.options.$parent.get(0).querySelectorAll('.dtp-values')).addClass('dtp-style-popup');
 			
 			// add button to open/close calendars container
-			config.$element.after('<span class="input-group-addon add-on btn dtp-toggler">'+ config.text.calendarButton +'</span>');
+			var target = this.options.viewInput || config.$element;
+			target.after('<span class="input-group-addon add-on btn dtp-toggler">'+ config.text.calendarButton +'</span>');
 		}
 	},
 	
@@ -214,8 +222,12 @@ if(!bg){
 	getUiTarget = function(){
 		var uiTarget = false;
 		if(this.options.uiTarget){
-			uiTarget = this.options.$element.parent().parent().get(0).querySelectorAll(this.options.uiTarget);
-			uiTarget = $(uiTarget);
+			if(typeof this.options.uiTarget == 'string'){
+				uiTarget = this.options.$element.parent().parent().get(0).querySelectorAll(this.options.uiTarget);
+				uiTarget = $(uiTarget);
+			} else {
+				uiTarget = this.options.uiTarget;
+			}
 		}
 		
 		return uiTarget;
@@ -577,7 +589,7 @@ if(!bg){
 			it.disabled = true;
 		}
 
-		if(!it.disabled && config.dateValue > 0){
+		if(!it.disabled && (config.dateValue > 0 || config.dateValue.length > 0)){
 			if(custom.selected || (config.mode == 'range' && val >= config.dateValue[0] && val <= config.dateValue[1])){
 				className.push('dtp-selected');
 			} else {
@@ -672,7 +684,10 @@ if(!bg){
 			return new Date;		
 		} else if(date instanceof Date) {
 			return date;
-		} else if (date.indexOf('now') >= 0) {
+		}
+		date = date.toString();
+		
+		if(date.indexOf('now') >= 0){
 			var method,pa,paClean,dateSTR = date.replace('now',''),
 			separator	= new RegExp('(.*?(mins|min|minutes|minute|hours|hour|days|day|months|month|years|year))','gi'),
 			parts		= dateSTR.match(separator),
@@ -704,12 +719,12 @@ if(!bg){
 
 			return date;
 		}
-			
+		
 		var splitted_date	= date.split(config.separator);
 		if (splitted_date.length > 1) {
-			splitted_date.forEach(function (element, index, array) {
-				array[index]	= strToDate.call(that,$.trim(element), format);
-			});
+			for(var s=0;s<splitted_date.length;s++){
+				splitted_date[s] = strToDate.call(that,$.trim(splitted_date[s]), format);
+			}
 			return splitted_date;
 		}
 		
@@ -836,7 +851,7 @@ if(!bg){
 			date = new Date();
 		}
 		date = (date instanceof Date) ? date : new Date(date);
-			
+		
 		var that = this,
 			config = this.options,
 			format = (typeof format != 'undefined' && format != '') ? format : config.format,
@@ -982,20 +997,22 @@ if(!bg){
 	clickDate = function(date,format){
 		var that = this,
 			config = this.options,
-			current;
+			current,
+			sendTrigger = true;
+			
 		if(!(date instanceof Date)){
 			if(typeof date == 'undefined'){
 				date = config.today;
-			} else if(!isNaN(parseFloat(date)) && isFinite(date)){
-				date = new Date(date);
+			} else if(!isNaN(parseInt(date)) && isFinite(date)){
+				date = new Date(parseInt(date));
 			} else {
 				date = strToDate.call(this,date,(format || config.format));
 			}
 		}
-			
+		
 		date.setZeroSec();
 		current = date.valueOf();
-			
+		
 		switch(config.mode){
 			case 'single':
 				if(config.dateValue == current){
@@ -1026,6 +1043,7 @@ if(!bg){
 					config.dateValue[0] = current;
 					config.rangeStart = true;
 					config.rangeEnd = false;
+					sendTrigger = false;
 				} else if(!config.rangeEnd) {
 					config.dateValue[1] = current;
 					config.rangeEnd = true;
@@ -1033,72 +1051,85 @@ if(!bg){
 				break;
 		}
 		if(config.dateValue instanceof Array){
-			config.dateValue.sort();
+			config.dateValue.sort(function sortNumber(a,b){return a - b;});
 		}
 		
-		trigger.call(this,this.options.event_date_changed, this.options.onDateChange,[]);
+		if(sendTrigger){
+			trigger.call(this,this.options.event_date_changed, this.options.onDateChange,[]);
+		}		
+
 		updateUi.call(this);
 	},
 	
 	updateUi = function(){
 		var that = this,
-			config = this.options,values,val='',uiVal='',tmpDate,uiRender,method;
+			config = this.options,
+			values = config.dateValue,
+			val='',
+			uiVal='',
+			mode = config.mode,
+			format = config.format,
+			uiFormat = config.uiFormat,
+			separator = config.separator,
+			uiSeparator = config.separator,
+			tmpDate,uiRender,method,updateValue = true;
 
-		switch(config.mode){
-			case 'single':
-				val = '';
-				uiVal = '';
-				if(config.dateValue){
-					tmpDate = new Date(config.dateValue);
-					val = dateToStr.call(this,tmpDate,config.format);
-					uiVal = dateToStr.call(this,tmpDate,config.uiFormat);
-				}
-				break;
-				
-			case 'multiple':
-				val = [];uiVal = [];
-				values = config.dateValue;
-				for(var g=0;g<values.length;g++){
-					uiRender = '';
-					tmpDate = new Date(values[g]);
-					val.push(dateToStr.call(this,tmpDate,config.format));
-					
-					uiRender += '<span class="dtp-date-multiple" data-value="'+ tmpDate.valueOf() +'">';
-					uiRender += dateToStr.call(this,tmpDate,config.uiFormat);
-					uiRender += '</span> ';
-					uiVal.push(uiRender);
-				}
-
+		if(mode == 'single'){
+			if(values && values != ''){
+				tmpDate = new Date(values);
+				val = dateToStr.call(this,tmpDate,format);
+				uiVal = dateToStr.call(this,tmpDate,uiFormat);
+			}
+		} else {
+			val = [];uiVal = [];
+			
+			if(mode == 'multiple'){
 				if(values.length > 0){
-					val = val.join(config.separator);
-					uiVal = uiVal.join('');
-				} else {
-					uiVal = val = '';
+					for(var g=0;g<values.length;g++){
+						tmpDate = new Date(values[g]);
+						val.push(dateToStr.call(this,tmpDate,format));
+						
+						uiRender = '<span class="dtp-date-multiple" data-value="'+ tmpDate.valueOf() +'">';
+						uiRender += dateToStr.call(this,tmpDate,uiFormat);
+						uiRender += '</span> ';
+						uiVal.push(uiRender);
+					}
+					
+					uiSeparator = ' ';
 				}
-				break;				
-			case 'range':
-				val = [];uiVal = [];
-				values = config.dateValue;
+			} else {
+				// range
 				if(values.length == 2){
 					for(var g=0;g<2;g++){
 						tmpDate = new Date(values[g]);
-						val.push(dateToStr.call(this,tmpDate,config.format));
-						uiVal.push(dateToStr.call(this,tmpDate,config.uiFormat));
+						val.push(dateToStr.call(this,tmpDate,format));
+						uiVal.push(dateToStr.call(this,tmpDate,uiFormat));
 					}
-					val = val.join(config.separator);
-					uiVal = uiVal.join(config.separator);
+				} else {
+					updateValue = false;
 				}
-				break;
+			}
+			
+			if(updateValue){				
+				val = val.join(separator);
+				uiVal = uiVal.join(uiSeparator);
+			}
 		}
 
-		config.$element.val(val).triggerHandler('keyup');
-		var uiTarget = getUiTarget.call(this);
-		if(uiTarget.length){
-			method = 'val';
-			if(config.mode == 'multiple' && !uiTarget.is('input')){
-				method = 'html';
+		if(updateValue){
+			config.$element.val(val).triggerHandler('keyup');
+			var uiTarget = getUiTarget.call(this);
+			if(uiTarget.length){
+				method = 'val';
+				if(config.mode == 'multiple' || !uiTarget.is('input')){
+					method = 'html';
+				}
+				uiTarget[method](uiVal);
 			}
-			uiTarget[method](uiVal);
+		}
+		
+		if(this.options.viewInput){
+			this.options.viewInput.val(uiVal);
 		}
 		addCalendars.call(that);
 	},
@@ -1122,7 +1153,7 @@ if(!bg){
 				clickDate.call(this, value);
 				
 				if(config.style == 'popup' && config.autoclose){
-					if(config.mode != 'range' || (config.mode == 'range' && config.dateValue.length == 2)){
+					if(config.mode != 'range' || (config.mode == 'range' && config.dateValue.length == 2 && config.dateValue[1])){
 						config.$element.triggerHandler('click');
 					}
 				}
@@ -1412,8 +1443,27 @@ if(!bg){
 			return dateToStr.call(this,dateObj,format);
 		},
 		
-		getValue : function(){		
-			return this.options.dateValue;
+		getValue : function(toString, format){
+			var value = this.options.dateValue,
+			cleanValue = value;
+			
+			toString = toString || false;
+			format = format || this.options.format;
+			
+			if(toString){
+				if(value instanceof Array){
+					cleanValue = [];
+					for(var v=0;v<value.length;v++){
+						cleanValue.push(dateToStr.call(this,value[v],format));
+					}
+					
+					cleanValue = cleanValue.join(this.options.separator);
+				} else {
+					cleanValue = dateToStr.call(this,value[v],format);
+				}
+			}
+			
+			return cleanValue;
 		},
 		
 		setValue : function(value,format){
@@ -1426,7 +1476,7 @@ if(!bg){
 				value = [value];
 			}
 			
-			for(var k in value){
+			for(var k=0;k<value.length;k++){
 				value[k] = strToDate.call(this,value[k],format);
 			}
 			
