@@ -15,7 +15,6 @@
 	position: absolute;
 	left: 0;
 	z-index: 100;
-	background: #fff;
 }
 
 .btn-close-calendar {
@@ -28,6 +27,7 @@
 
 .dtp-calendar {
 	display: inline-block;
+	background: #fff;
 }
 
 .dtp-container{
