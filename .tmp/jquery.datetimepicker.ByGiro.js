@@ -1,5 +1,6 @@
 /*
  *  Project: datetimepickerByGiro jQuery plugin
+ *  Version: 0.0.3
  *  Description: a powerfull datetimepicker fully featured
  *  Author: Girolamo Tomaselli http://bygiro.com
  *  License:	MIT
@@ -14,6 +15,29 @@ if(!bg){
 		bg = angular.element;
 		bg.extend = angular.extend;
 		bg.isFunction = angular.isFunction;
+		
+		bg.prototype.is = function(selector){
+			var el = this[0];			
+			return (el.matches || el.matchesSelector || el.msMatchesSelector || el.mozMatchesSelector || el.webkitMatchesSelector || el.oMatchesSelector).call(el, selector);
+		}
+		
+		bg.prototype.slideUp = $.prototype.hide = function(){
+			for(var i=0;i<this.length;i++){
+				this[i].style.display = 'none';
+			}
+			return this;
+		}
+		
+		bg.prototype.slideDown = $.prototype.show = function(){
+			for(var i=0;i<this.length;i++){
+				this[i].style.display = '';
+			}
+			return this;
+		}
+		
+		bg.prototype.get = function(index){
+			return this[index];
+		}
 	}
 }
 
@@ -85,11 +109,11 @@ if(!bg){
 		showDisabledTimes : false,
 		calendars		: 1,
 		format			: 'Y-m-d', // PHP standard format
-		uiFormat		: 'Y-m-d', // PHP standard format. if provided different from the option "format", the original input will be hidden, and the date selected will be shown in this format
+		uiFormat		: false, // PHP standard format. if provided different from the option "format", the original input will be hidden, and the date selected will be shown in this format
 		separator		: ' | ', // this will be the separator for multiple dates or date range
 		mode			: 'single', // single / multiple / range
 		timeFormat		: 24, // 12 / 24
-		minuteStep		: 5,
+		minuteStep		: 30,
 	/*	specialDates	:[ // it could be a simple array of numbers/strings 0 - 6: sunday -> saturday OR a more complex array of objects with more parameters
 			0, // 0 - 6: sunday -> saturday
 			'Wednesday', //you can also use the day name BUT it must be the same word (case sensitive) as specified in the language text options
@@ -127,6 +151,23 @@ if(!bg){
 			monthsShort	: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 		},
 		
+		// Events
+		event_date_changed: pluginName +'_changed',
+		event_initialized: pluginName +'_initialized',
+		
+		views: ['times','days','months','years'],
+		
+		methods: {
+			years: 'addYears',
+			months: 'addYears',
+			days: 'addMonths',
+			times: 'addDays'
+		},
+		
+		dateValue		: '',
+		
+		today: (new Date).setHours(0,0,0,0).valueOf(),
+			
 		// callbacks
 		onDateRender: function(){return {};},
 		onDateChange: function(){return true;},
@@ -138,20 +179,22 @@ if(!bg){
 			data = [data];
 		}
 		data.unshift(this);
-		this.options.$element.triggerHandler(event, data);
 		
-		if ($.isFunction(callback)) {
+		if (typeof callback == 'function') {
 			callback.call(this, data);
 		}
+		
+		this.$element.triggerHandler(event, data);
+		
 	},
 
 	addHTML = function(){
 		var that = this,
 			config = this.options,
-			html = '',tmpEle = config.$element;
+			html = '',tmpEle = this.$element;
 
 		if(tmpEle.parent().hasClass('input-group') || tmpEle.parent().hasClass('input-append') || tmpEle.parent().hasClass('input-prepend')){
-			tmpEle = config.$element.parent();
+			tmpEle = this.$element.parent();
 		}
 				
 		this.options.$parent = tmpEle.wrap('<div class="dtp-container input-append input-group"></div>').parent();
@@ -173,12 +216,12 @@ if(!bg){
 					}
 				}
 			} else if(config.uiFormat && config.format != config.uiFormat){
-				var eleId = this.options.$element.attr('id'),
-				eleClass = this.options.$element.attr('class'),
+				var eleId = this.$element.attr('id'),
+				eleClass = this.$element.attr('class'),
 				htmlString = '<input readonly="true" type="text" id="'+ eleId +'-view-input" class="'+ eleClass +' view-input"/> ';
-				this.options.$element.after(htmlString);
-				this.options.viewInput = this.options.$element.next();
-				this.options.$element.hide();
+				this.$element.after(htmlString);
+				this.options.viewInput = this.$element.next();
+				this.$element.hide();
 			}
 			
 			updateUi.call(this);
@@ -193,7 +236,7 @@ if(!bg){
 			var mCont = $(this.options.$parent.get(0).querySelectorAll('.dtp-values')).addClass('dtp-style-popup');
 			
 			// add button to open/close calendars container
-			var target = this.options.viewInput || config.$element;
+			var target = this.options.viewInput || this.$element;
 			target.after('<span class="input-group-addon add-on btn dtp-toggler">'+ config.text.calendarButton +'</span>');
 		}
 	},
@@ -223,7 +266,7 @@ if(!bg){
 		var uiTarget = false;
 		if(this.options.uiTarget){
 			if(typeof this.options.uiTarget == 'string'){
-				uiTarget = this.options.$element.parent().parent().get(0).querySelectorAll(this.options.uiTarget);
+				uiTarget = this.$element.parent().parent().get(0).querySelectorAll(this.options.uiTarget);
 				uiTarget = $(uiTarget);
 			} else {
 				uiTarget = this.options.uiTarget;
@@ -851,9 +894,9 @@ if(!bg){
 			date = new Date();
 		}
 		date = (date instanceof Date) ? date : new Date(date);
-		
+				
 		var that = this,
-			config = this.options,
+			config = that.options,
 			format = (typeof format != 'undefined' && format != '') ? format : config.format,
 			m = date.getMonth(),
 			d = date.getDate(),
@@ -1117,7 +1160,7 @@ if(!bg){
 		}
 
 		if(updateValue){
-			config.$element.val(val).triggerHandler('keyup');
+			this.$element.val(val).triggerHandler('keyup');
 			var uiTarget = getUiTarget.call(this);
 			if(uiTarget.length){
 				method = 'val';
@@ -1154,7 +1197,7 @@ if(!bg){
 				
 				if(config.style == 'popup' && config.autoclose){
 					if(config.mode != 'range' || (config.mode == 'range' && config.dateValue.length == 2 && config.dateValue[1])){
-						config.$element.triggerHandler('click');
+						this.$element.triggerHandler('click');
 					}
 				}
 				return;
@@ -1172,11 +1215,11 @@ if(!bg){
 	
 	addEventsHandlers = function(){
 		var that = this,
-			config = this.options,
+			config = that.options,
 			target;
 			
 			
-		var calendarsContainer = $(this.options.$parent[0].querySelectorAll('.dtp-calendars'));
+		var calendarsContainer = $(that.options.$parent[0].querySelectorAll('.dtp-calendars'));
 		calendarsContainer.on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
@@ -1196,7 +1239,7 @@ if(!bg){
 			}
 		});
 		
-		target = this.options.$parent.parent()[0].querySelectorAll('.dtp-values');
+		target = that.options.$parent.parent()[0].querySelectorAll('.dtp-values');
 		$(target).on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
@@ -1205,11 +1248,11 @@ if(!bg){
 			clickDate.call(that,parseInt(ele.attr('data-value')));
 		});
 		
-		target = this.options.$parent.parent()[0].querySelectorAll('.dtp-toggler');
+		target = that.options.$parent.parent()[0].querySelectorAll('.dtp-toggler');
 		$(target).on('click',function(event){
 			event.preventDefault();
 			event.stopPropagation();
-			config.$element.triggerHandler('click');
+			that.$element.triggerHandler('click');
 		});
 		
 		calendarsContainer.on('click',function(event){
@@ -1240,10 +1283,10 @@ if(!bg){
 		});
 
 		if(config.style == 'popup'){
-			var targEle = this.options.$element;
+			var targEle = that.$element;
 			calendarsContainer.hide().removeClass('open');
 			
-			var uiTarget = getUiTarget.call(this);
+			var uiTarget = getUiTarget.call(that);
 			if(uiTarget.length){
 				targEle.add(uiTarget);
 			}
@@ -1257,49 +1300,19 @@ if(!bg){
 		}
 	};
 	
-    // The actual plugin constructor
-    var Plugin = function ( element ) {
-        /*
-         * Plugin instantiation
-         */		
-		
-		this.others_opts = {
-			// Events
-			event_date_changed: pluginName +'_changed',
-			event_initialized: pluginName +'_initialized',
+    var methods = {
+        init: function ($element, options) {
+			var that = this,
+			ele,config,maxView,minView,startView,todayDate,inlineData;
+			that.$element = $element;
 			
-			views: ['times','days','months','years'],
+			that.options = $.extend({}, defaults, options);
 			
-			methods: {
-				years: 'addYears',
-				months: 'addYears',
-				days: 'addMonths',
-				times: 'addDays'
-			},
-			
-			dateValue		: '',
-
-			initialized: false,
-			
-			today: (new Date).setHours(0,0,0,0).valueOf(),
-			
-			// just creating a jQuery object, just in case
-			$element: $(element)	
-		}
-		
-		this.options = $.extend( {}, defaults );
-    };
-
-    Plugin.prototype = {
-        init: function ( options ) {
-			var ele,config,maxView,minView,startView,todayDate,inlineData;
-			if(this.options.initialized){
+			if(that.options.initialized){
 				return;
 			}
-		
-			$.extend( this.options, options, this.others_opts );
-			
-			ele = this.options.$element;
+					
+			ele = that.$element;
 			
 			if(!ele.is('input[type=text]')){
 				return;
@@ -1308,10 +1321,22 @@ if(!bg){
 			// check we have some data on the element
 			inlineData = ele.data();
 
-			this.options = $.extend({}, this.options, options, inlineData, this.others_opts );
+			$.extend(that.options, inlineData);
 
-			config = this.options;
-
+			config = that.options;
+			
+			if(!config.format && config.uiFormat){
+				config.format = config.uiFormat;
+			}
+			
+			if(config.format && !config.uiFormat){
+				config.uiFormat = config.format;
+			}
+			
+			if(!config.format || !config.uiFormat){
+				config.uiFormat = config.format = defaults.format;
+			}
+			
 			config.text.days.unshift(config.text.days[6]);
 			config.text.daysShort.unshift(config.text.daysShort[6]);
 
@@ -1336,7 +1361,7 @@ if(!bg){
 						if(valInd >= 0){
 							val.date = createFakeDate(valInd);
 						} else {
-							val.date = strToDate.call(this, val.date, config.format);
+							val.date = strToDate.call(that, val.date, config.format);
 						}
 					}
 					
@@ -1347,15 +1372,15 @@ if(!bg){
 						val.selectableTimes = [val.selectableTimes];
 					}
 					
-					val.selectableTimes = (val.selectableTimes instanceof Array) ? cleanTslots.call(this,val.selectableTimes) : [];
+					val.selectableTimes = (val.selectableTimes instanceof Array) ? cleanTslots.call(that,val.selectableTimes) : [];
 					cleanSelDates.push(val);
 				}
 				config.specialDates = cleanSelDates;
 			}
 			
-			config.maxView = config.maxView ? getViewType.call(this,config.maxView) : 'years';
-			config.minView = config.minView ? getViewType.call(this,config.minView) : 'times';
-			config.startView = config.startView ? getViewType.call(this,config.startView) : 'days';
+			config.maxView = config.maxView ? getViewType.call(that,config.maxView) : 'years';
+			config.minView = config.minView ? getViewType.call(that,config.minView) : 'times';
+			config.startView = config.startView ? getViewType.call(that,config.startView) : 'days';
 			maxView = config.views.indexOf(config.maxView);
 			minView = config.views.indexOf(config.minView);
 			startView = config.views.indexOf(config.startView);
@@ -1370,14 +1395,14 @@ if(!bg){
 			config.mode		= /single|multiple|range/.test(config.mode) ? config.mode : 'single';
 			config.timeFormat		= /12|24/.test(config.timeFormat) ? config.timeFormat : 24;
 			if (typeof config.min == 'string' && config.min != '') {
-				config.min = strToDate.call(this,config.min, config.format);
+				config.min = strToDate.call(that,config.min, config.format);
 			}
 			
 			if(!(config.min instanceof Date) || config.min.toString() == 'Invalid Date'){
 				config.min = null;
 			}
 			if (typeof config.max === 'string' && config.max != '') {
-				config.max = strToDate.call(this, config.max, config.format);
+				config.max = strToDate.call(that, config.max, config.format);
 			}
 			
 			if(!(config.max instanceof Date) || config.max.toString() == 'Invalid Date'){
@@ -1386,13 +1411,13 @@ if(!bg){
 
 			config.today	= new Date();
 			config.dateValue = '';
-			if(config.$element.val() != ''){
-				config.dateValue = strToDate.call(this,config.$element.val(), config.format);
+			if(that.$element.val() != ''){
+				config.dateValue = strToDate.call(that,that.$element.val(), config.format);
 						
 				if (config.mode != 'single') {
 					if (config.dateValue instanceof Array) {
 						for (var i = 0; i < config.dateValue.length; i++) {
-							config.dateValue[i] = (strToDate.call(this,config.dateValue[i], config.format).setHours(0,0,0,0)).valueOf();
+							config.dateValue[i] = (strToDate.call(that,config.dateValue[i], config.format).setHours(0,0,0,0)).valueOf();
 						}
 						if (config.mode == 'range') {
 							config.dateValue[1] = ((new Date(config.dateValue[1])).setHours(23,59,59,0)).valueOf();
@@ -1417,22 +1442,21 @@ if(!bg){
 				config.today.setHours(0,0,0,0);
 			}
 			
-			this.options = config;
-			if(getUiTarget.call(this).length){
+			if(getUiTarget.call(that).length){
 				// hide the original input
 				ele.hide();
 			}
 			
-			addHTML.call(this);
+			addHTML.call(that);
 			
-			addCalendars.call(this);
-			addEventsHandlers.call(this);
+			addCalendars.call(that);
+			addEventsHandlers.call(that);
 			
 			ele.attr('readonly','readonly').addClass('form-control');
 			
 			// initialization completed
-			this.options.initialized = true;			
-			trigger.call(this,this.options.event_initialized, this.options.onInit,[]);
+			that.options.initialized = true;
+			trigger.call(that,that.options.event_initialized, that.options.onInit,[]);
         },
 		
 		strToDate : function(str,format){		
@@ -1444,22 +1468,23 @@ if(!bg){
 		},
 		
 		getValue : function(toString, format){
-			var value = this.options.dateValue,
+			var that = this,
+			value = that.options.dateValue,
 			cleanValue = value;
 			
 			toString = toString || false;
-			format = format || this.options.format;
+			format = format || that.options.format;
 			
 			if(toString){
 				if(value instanceof Array){
 					cleanValue = [];
 					for(var v=0;v<value.length;v++){
-						cleanValue.push(dateToStr.call(this,value[v],format));
+						cleanValue.push(dateToStr.call(that,value[v],format));
 					}
 					
-					cleanValue = cleanValue.join(this.options.separator);
+					cleanValue = cleanValue.join(that.options.separator);
 				} else {
-					cleanValue = dateToStr.call(this,value[v],format);
+					cleanValue = dateToStr.call(that,value,format);
 				}
 			}
 			
@@ -1472,62 +1497,64 @@ if(!bg){
 		},
 		
 		addValue : function(value,format){
+			var that = this;
 			if(!(value instanceof Array)){
 				value = [value];
 			}
 			
 			for(var k=0;k<value.length;k++){
-				value[k] = strToDate.call(this,value[k],format);
+				value[k] = strToDate.call(that,value[k],format);
 			}
 			
-			if(this.options.mode == 'single'){
+			if(that.options.mode == 'single'){
 				value = value[0];
 			} else {
-				if(!(this.options.dateValue instanceof Array) && this.options.dateValue != '') {
-					this.options.dateValue = [this.options.dateValue];
+				if(!(that.options.dateValue instanceof Array) && that.options.dateValue != '') {
+					that.options.dateValue = [that.options.dateValue];
 				} else {
-					this.options.dateValue = [];
+					that.options.dateValue = [];
 				}
-				value = this.options.dateValue.concat(value);
+				value = that.options.dateValue.concat(value);
 			}
 			
-			this.options.dateValue = value;
+			that.options.dateValue = value;
 			
-			if(this.options.dateValue instanceof Array){
-				this.options.dateValue.sort();
+			if(that.options.dateValue instanceof Array){
+				that.options.dateValue.sort();
 			}
-			updateUi.call(this);
+			updateUi.call(that);
 		},
 		
 		removeValue : function(value){
+			var that = this;
 			if(!(value instanceof Array)){
 				value = [value];
 			}
 			
 			for(var k=0;k<value.length;k++){
-				if(this.options.dateValue instanceof Array){
-					for(var d=0;d<this.options.dateValue.length;d++){
-						if(value[k] == this.options.dateValue[d]){
-							this.options.dateValue.splice(k, 1);
+				if(that.options.dateValue instanceof Array){
+					for(var d=0;d<that.options.dateValue.length;d++){
+						if(value[k] == that.options.dateValue[d]){
+							that.options.dateValue.splice(k, 1);
 						}
 					}
 				} else {
-					if(value[k] == this.options.dateValue){
-						this.options.dateValue = '';
+					if(value[k] == that.options.dateValue){
+						that.options.dateValue = '';
 						break;
 					}
 				}
 			}
 						
-			if(this.options.dateValue instanceof Array){
-				this.options.dateValue.sort();
+			if(that.options.dateValue instanceof Array){
+				that.options.dateValue.sort();
 			}
-			updateUi.call(this);
+			updateUi.call(that);
 		},
 
         destroy: function () {
 		var that = this,
-			config = this.options,ele;
+			config = that.options,ele;
 			
 			ele = config.$parent.get(0).querySelectorAll('.dtp-values');
 			ele.parentNode.removeChild(ele);
@@ -1535,9 +1562,9 @@ if(!bg){
 			ele = config.$parent.get(0).querySelectorAll('.dtp-calendars');
 			ele.parentNode.removeChild(ele);
 			
-			config.$element.show();
-			if(config.$element.parent().hasClass('input-group') || config.$element.parent().hasClass('input-append') || config.$element.parent().hasClass('input-prepend')){
-				config.$element.parent().show();
+			that.$element.show();
+			if(that.$element.parent().hasClass('input-group') || that.$element.parent().hasClass('input-append') || that.$element.parent().hasClass('input-prepend')){
+				that.$element.parent().show();
 			}
 			
 			config.$parent.replaceWith(config.$parent.html());
@@ -1551,49 +1578,28 @@ if(!bg){
      * Plugin wrapper, preventing against multiple instantiations and
      * allowing any public function to be called via the jQuery plugin,
      * e.g. $(element).pluginName('functionName', arg1, arg2, ...)
-     */
-    var main = function ( arg ) {
-
-        var args, instance;
-
-		if(this.length <= 0 && typeof arg != 'string'){
-			return this;
-		}
-		
-        // only allow the plugin to be instantiated once
-        if (!( this.data( dataPlugin ) instanceof Plugin )) {
-
-            // if no instance, create one
-            this.data( dataPlugin, new Plugin( this ) );
-        }
-		
-        instance = this.data( dataPlugin );
-
-		if(typeof instance != 'undefined'){
-			instance.element = this;
-		} else {
-			instance = new Plugin( this );
-		}
-
-        // Is the first parameter an object (arg), or was omitted,
-        // call Plugin.init( arg )
-        if (typeof arg === 'undefined' || typeof arg === 'object') {
-
-            if ( typeof instance['init'] === 'function' ) {
-                instance.init( arg );
-				
+     */	
+    var main = function (method) {
+        var instance = this.data(dataPlugin);
+        if (instance) {
+            if (typeof method === 'string' && instance[method]) {
+                return instance[method].apply(instance, Array.prototype.slice.call(arguments, 1));
             }
-
-        // checks that the requested public method exists
-        } else if ( typeof arg === 'string' && typeof instance[arg] === 'function' ) {
-
-            // copy arguments & remove function name
-            args = Array.prototype.slice.call( arguments, 1 );
-
-            // call the method
-            return instance[arg].apply( instance, args );
+            return console.log('Method ' +  method + ' does not exist on plugin '+ pluginName);
         } else {
-            $.error('Method ' + arg + ' does not exist on jQuery.' + pluginName);
+            if (!method || typeof method === 'object') {
+				
+				var listCount = this.length;
+				for ( var i = 0; i < listCount; i ++) {
+					var $this = $(this[i]);
+                    instance = $.extend({}, methods);
+                    instance.init($this, method);
+                    $this.data(dataPlugin, instance);
+				};
+
+				return this;
+            }
+            return console.log('plugin '+ pluginName +' is not instantiated.');
         }
     };
 
@@ -1602,28 +1608,5 @@ if(!bg){
 		$.fn[ pluginName ] = main;
 	} else {
 		$.prototype[ pluginName ] = main;
-
-		$.prototype.is = function(selector){
-			var el = this[0];			
-			return (el.matches || el.matchesSelector || el.msMatchesSelector || el.mozMatchesSelector || el.webkitMatchesSelector || el.oMatchesSelector).call(el, selector);
-		}
-		
-		$.prototype.slideUp = $.prototype.hide = function(){
-			for(var i=0;i<this.length;i++){
-				this[i].style.display = 'none';
-			}
-			return this;
-		}
-		
-		$.prototype.slideDown = $.prototype.show = function(){
-			for(var i=0;i<this.length;i++){
-				this[i].style.display = '';
-			}
-			return this;
-		}
-		
-		$.prototype.get = function(index){
-			return this[index];
-		}
 	}	
 }(bg, window, document));
