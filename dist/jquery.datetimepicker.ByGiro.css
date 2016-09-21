@@ -1,6 +1,6 @@
 /*
  *  Project: datetimepickerByGiro jQuery plugin
- *  Version: 0.0.2
+ *  Version: 0.0.4
  *  Description: a powerfull datetimepicker fully featured
  *  Author: Girolamo Tomaselli http://bygiro.com
  *  License:	MIT
@@ -15,6 +15,7 @@
 	position: absolute;
 	left: 0;
 	z-index: 100;
+	background: #fff;
 }
 
 .btn-close-calendar {
@@ -27,7 +28,6 @@
 
 .dtp-calendar {
 	display: inline-block;
-	background: #fff;
 }
 
 .dtp-container{

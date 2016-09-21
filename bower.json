@@ -1,13 +1,12 @@
 {
   "name": "jquery-datetime-picker-bygiro",
-  "version": "v0.0.2",
+  "version": "v0.0.4",
   "authors": [
     "ByGiro <girotomaselli@gmail.com>"
   ],
   "contributors": [],
   "main": [
-	"dist/jquery.datetimepicker.ByGiro.js",
-	"dist/jquery.datetimepicker.ByGiro.min.js"
+	"dist/jquery.datetimepicker.ByGiro.js"
   ],
   "description": "Fully featured datetimepicker",
   "keywords": [

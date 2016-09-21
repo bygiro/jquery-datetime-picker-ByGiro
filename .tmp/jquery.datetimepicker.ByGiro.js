@@ -1,6 +1,6 @@
 /*
  *  Project: datetimepickerByGiro jQuery plugin
- *  Version: 0.0.3
+ *  Version: 0.0.4
  *  Description: a powerfull datetimepicker fully featured
  *  Author: Girolamo Tomaselli http://bygiro.com
  *  License:	MIT
@@ -33,10 +33,6 @@ if(!bg){
 				this[i].style.display = '';
 			}
 			return this;
-		}
-		
-		bg.prototype.get = function(index){
-			return this[index];
 		}
 	}
 }
@@ -207,8 +203,7 @@ if(!bg){
 				var uiTarget = getUiTarget.call(this);
 				if(!uiTarget.length || uiTarget.is('input')){
 					this.options.$parent.append('<div class="dtp-values"></div>');
-					var mCont = this.options.$parent.get(0).querySelectorAll('.dtp-values');
-					var mCont = $(mCont);
+					var mCont = $(this.options.$parent[0].querySelectorAll('.dtp-values'));
 					if(uiTarget instanceof jQuery){
 						this.options.uiTarget.add(mCont);
 					} else {
@@ -233,7 +228,7 @@ if(!bg){
 		this.options.$parent.append(html);
 		
 		if(config.style == 'popup'){
-			var mCont = $(this.options.$parent.get(0).querySelectorAll('.dtp-values')).addClass('dtp-style-popup');
+			var mCont = $(this.options.$parent[0].querySelectorAll('.dtp-values')).addClass('dtp-style-popup');
 			
 			// add button to open/close calendars container
 			var target = this.options.viewInput || this.$element;
@@ -266,8 +261,7 @@ if(!bg){
 		var uiTarget = false;
 		if(this.options.uiTarget){
 			if(typeof this.options.uiTarget == 'string'){
-				uiTarget = this.$element.parent().parent().get(0).querySelectorAll(this.options.uiTarget);
-				uiTarget = $(uiTarget);
+				uiTarget = $(this.$element.parent().parent()[0].querySelectorAll(this.options.uiTarget));
 			} else {
 				uiTarget = this.options.uiTarget;
 			}
@@ -289,7 +283,7 @@ if(!bg){
 
 	getViewType = function(type){
 		var config = this.options,
-			currentView = (config.$parent) ? $(config.$parent.get(0).querySelectorAll('[data-view-type]')).attr('data-view-type') : '',
+			currentView = (config.$parent) ? $(config.$parent[0].querySelectorAll('[data-view-type]')).attr('data-view-type') : '',
 			type=/years|months|days|times/i.test(type) ? type : (currentView || config.startView);
 			
 		return type;
@@ -1556,10 +1550,10 @@ if(!bg){
 		var that = this,
 			config = that.options,ele;
 			
-			ele = config.$parent.get(0).querySelectorAll('.dtp-values');
+			ele = config.$parent[0].querySelectorAll('.dtp-values');
 			ele.parentNode.removeChild(ele);
 			
-			ele = config.$parent.get(0).querySelectorAll('.dtp-calendars');
+			ele = config.$parent[0].querySelectorAll('.dtp-calendars');
 			ele.parentNode.removeChild(ele);
 			
 			that.$element.show();
